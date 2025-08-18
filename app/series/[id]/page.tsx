@@ -10,6 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useParams } from 'next/dist/client/components/navigation';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -20,16 +21,18 @@ export default async function SeriesDetailPage({ params }: Props) {
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const parameter = useParams();
+  const seriesId = parameter.id;
 
   useEffect(() => {
     loadSeriesData();
-  }, [(await params).id]);
+  }, [seriesId]);
 
   const loadSeriesData = async () => {
     try {
       const [seriesData, modelsData] = await Promise.all([
-        fetchSingleSeries((await params).id),
-        fetchModelsBySeries((await params).id)
+        fetchSingleSeries(seriesId as string),
+        fetchModelsBySeries(seriesId as string)
       ]);
       setSeries(seriesData);
       setModels(modelsData);

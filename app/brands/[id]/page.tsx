@@ -9,26 +9,34 @@ import ErrorMessage from '@/components/ErrorMessage';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useParams } from 'next/navigation';
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
-export default async function BrandDetailPage({ params }: Props) {
+export default function BrandDetailPage({ params }: Props) {
   const [brand, setBrand] = useState<Brand | null>(null);
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const parameter = useParams();
+  const rawBrandId = parameter.id;
+  const brandId = Array.isArray(rawBrandId) ? rawBrandId[0] : rawBrandId;
+
+  if (!brandId) {
+    return <ErrorMessage message="Brand ID is missing" />;
+  }
 
   useEffect(() => {
     loadBrandData();
-  }, [(await params).id]);
+  }, [brandId]);
 
   const loadBrandData = async () => {
     try {
       const [brandData, seriesData] = await Promise.all([
-        fetchBrand((await params).id),
-        fetchSeriesByBrand((await params).id)
+        fetchBrand(brandId),
+        fetchSeriesByBrand(brandId)
       ]);
       setBrand(brandData);
       setSeries(seriesData);

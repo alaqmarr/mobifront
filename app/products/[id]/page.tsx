@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { useParams } from 'next/dist/client/components/navigation';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -22,19 +23,21 @@ export default async function ProductDetailPage({ params }: Props) {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const parameter = useParams();
+  const productId = parameter.id;
 
   useEffect(() => {
     loadProductData();
-  }, [(await params).id]);
+  }, [productId]);
 
   const loadProductData = async () => {
     try {
       const [productData, allVariants] = await Promise.all([
-        fetchProduct((await params).id),
+        fetchProduct(productId as string),
         fetchProductVariants()
       ]);
 
-      const productVariants = allVariants.filter(async (v:any) => v.productId === (await params).id);
+      const productVariants = allVariants.filter((v:any) => v.productId === productId);
 
       setProduct(productData);
       setVariants(productVariants);

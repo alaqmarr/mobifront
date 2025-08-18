@@ -9,6 +9,7 @@ import ErrorMessage from '@/components/ErrorMessage';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useParams } from 'next/navigation';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -19,16 +20,19 @@ export default async function ModelDetailPage({ params }: Props) {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+    const parameter = useParams();
+    const rawModelId = parameter.id;
+    const modelId = Array.isArray(rawModelId) ? rawModelId[0] : rawModelId;
 
   useEffect(() => {
     loadModelData();
-  }, [(await params).id]);
+  }, [modelId]);
 
   const loadModelData = async () => {
     try {
       const [modelData, variantsData] = await Promise.all([
-        fetchSingleModel((await params).id),
-        fetchProductVariantsByModel((await params).id)
+        fetchSingleModel(modelId as string),
+        fetchProductVariantsByModel(modelId as string)
       ]);
       setModel(modelData);
       setVariants(variantsData);
