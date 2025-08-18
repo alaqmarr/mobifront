@@ -14,11 +14,7 @@ import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { useParams } from 'next/dist/client/components/navigation';
 
-interface Props {
-  params: Promise<{ id: string }>;
-}
-
-export default async function ProductDetailPage({ params }: Props) {
+export default function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);

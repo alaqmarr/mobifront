@@ -1,7 +1,11 @@
+// src/app/layout.tsx
+
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
+import Navbar from '@/components/Navbar'; // Import the new Navbar
+import { fetchBrands, fetchSeries } from '@/lib/api'; // Import your API functions
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -10,35 +14,25 @@ export const metadata: Metadata = {
   description: 'Modern product catalog with brands, series, and models',
 };
 
-export default function RootLayout({
+// Make the layout an async function to fetch data
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Fetch data on the server
+  const brands = await fetchBrands().catch(() => []);
+  const series = await fetchSeries().catch(() => []);
+
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <nav className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-8">
-                <h1 className="text-xl font-bold text-gray-900">
-                  <a href="/">Product Catalog</a>
-                </h1>
-                <div className="hidden md:flex space-x-6">
-                  <a href="/brands" className="text-gray-600 hover:text-gray-900">
-                    Brands
-                  </a>
-                  <a href="/series" className="text-gray-600 hover:text-gray-900">
-                    Series
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </nav>
-        {children}
-        <Toaster position="top-right" />
+      <body className={`${inter.className} bg-gray-50`}>
+        {/* Use the new Navbar and pass the fetched data as props */}
+        <Navbar brands={brands} series={series} />
+        <main>
+          {children}
+        </main>
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );
