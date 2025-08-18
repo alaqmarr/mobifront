@@ -14,10 +14,10 @@ import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function ProductDetailPage({ params }: Props) {
+export default async function ProductDetailPage({ params }: Props) {
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,17 +25,17 @@ export default function ProductDetailPage({ params }: Props) {
 
   useEffect(() => {
     loadProductData();
-  }, [params.id]);
+  }, [(await params).id]);
 
   const loadProductData = async () => {
     try {
       const [productData, allVariants] = await Promise.all([
-        fetchProduct(params.id),
+        fetchProduct((await params).id),
         fetchProductVariants()
       ]);
-      
-      const productVariants = allVariants.filter((v:any) => v.productId === params.id);
-      
+
+      const productVariants = allVariants.filter(async (v:any) => v.productId === (await params).id);
+
       setProduct(productData);
       setVariants(productVariants);
     } catch (err) {

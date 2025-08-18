@@ -12,10 +12,10 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function SeriesDetailPage({ params }: Props) {
+export default async function SeriesDetailPage({ params }: Props) {
   const [series, setSeries] = useState<Series | null>(null);
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,13 +23,13 @@ export default function SeriesDetailPage({ params }: Props) {
 
   useEffect(() => {
     loadSeriesData();
-  }, [params.id]);
+  }, [(await params).id]);
 
   const loadSeriesData = async () => {
     try {
       const [seriesData, modelsData] = await Promise.all([
-        fetchSingleSeries(params.id),
-        fetchModelsBySeries(params.id)
+        fetchSingleSeries((await params).id),
+        fetchModelsBySeries((await params).id)
       ]);
       setSeries(seriesData);
       setModels(modelsData);

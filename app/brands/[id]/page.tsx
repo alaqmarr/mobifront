@@ -11,10 +11,10 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function BrandDetailPage({ params }: Props) {
+export default async function BrandDetailPage({ params }: Props) {
   const [brand, setBrand] = useState<Brand | null>(null);
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,13 +22,13 @@ export default function BrandDetailPage({ params }: Props) {
 
   useEffect(() => {
     loadBrandData();
-  }, [params.id]);
+  }, [(await params).id]);
 
   const loadBrandData = async () => {
     try {
       const [brandData, seriesData] = await Promise.all([
-        fetchBrand(params.id),
-        fetchSeriesByBrand(params.id)
+        fetchBrand((await params).id),
+        fetchSeriesByBrand((await params).id)
       ]);
       setBrand(brandData);
       setSeries(seriesData);

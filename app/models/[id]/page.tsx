@@ -11,10 +11,10 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function ModelDetailPage({ params }: Props) {
+export default async function ModelDetailPage({ params }: Props) {
   const [model, setModel] = useState<Model | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,13 +22,13 @@ export default function ModelDetailPage({ params }: Props) {
 
   useEffect(() => {
     loadModelData();
-  }, [params.id]);
+  }, [(await params).id]);
 
   const loadModelData = async () => {
     try {
       const [modelData, variantsData] = await Promise.all([
-        fetchSingleModel(params.id),
-        fetchProductVariantsByModel(params.id)
+        fetchSingleModel((await params).id),
+        fetchProductVariantsByModel((await params).id)
       ]);
       setModel(modelData);
       setVariants(variantsData);
