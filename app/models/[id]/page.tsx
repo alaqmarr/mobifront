@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { fetchSingleModel, fetchProductVariantsByModel } from '@/lib/api';
 import { Model, ProductVariant } from '@/types';
 import ErrorMessage from '@/components/ErrorMessage';
-import { ArrowLeft, ShoppingBag, Layers, Hash, Calendar, Tag, Palette } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Layers, Hash, Calendar, Tag, Palette, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { formatPrice } from '@/lib/utils'; // Assuming you have a price formatter
 import { useParams } from 'next/navigation';
+import { Badge } from '@/components/ui/badge';
 
 // --- Skeleton Components for a Superior Loading Experience ---
 const HeaderSkeleton = () => (
@@ -170,32 +171,45 @@ const InfoPill = ({ icon: Icon, text }: { icon: React.ElementType, text: string 
 );
 
 const VariantCard = ({ variant }: { variant: ProductVariant }) => (
-  <motion.div
-    whileHover={{ y: -5, boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)" }}
-    className="bg-white/70 backdrop-blur rounded-2xl border border-gray-200 overflow-hidden h-full flex flex-col"
-  >
-    <div className="h-48 bg-gray-50 p-4 flex-shrink-0">
-      {variant.image ? (
-        <Image
-          src={variant.image}
-          alt={variant.name}
-          width={200}
-          height={200}
-          className="w-full h-full object-contain"
-        />
-      ) : (
-        <div className="w-full h-full grid place-content-center text-gray-400">No Image</div>
-      )}
-    </div>
-    <div className="p-4 flex flex-col flex-grow">
-      <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex-grow">{variant.name}</h3>
-      <div className="mt-2 text-sm text-gray-600 flex items-center gap-2">
-        <Tag className="w-4 h-4 text-gray-500" />
-        <span>SKU: {variant.id}</span>
+        <motion.div
+      whileHover={{ y: -5, boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)" }}
+      className="bg-white/70 backdrop-blur rounded-2xl border border-gray-200 overflow-hidden h-full flex flex-col"
+    >
+      <div className="h-48 bg-gray-50 p-4 flex-shrink-0">
+        {variant.image ? (
+          <Image
+            src={variant.image}
+            alt={variant.name}
+            width={200}
+            height={200}
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <div className="w-full h-full grid place-content-center text-gray-400">No Image</div>
+        )}
       </div>
-       <div className="mt-4">
-        <p className="text-xl font-bold text-indigo-600">{formatPrice(variant.price)}</p>
+      <div className="p-4 flex flex-col flex-grow">
+        <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{variant.name}</h3>
+        <p className="text-sm text-gray-500 mt-1">SKU: {variant.id}</p>
+        
+        <div className="flex-grow"></div>
+        
+        <div className="mt-4 flex justify-between items-center">
+          <p className="text-2xl font-bold text-indigo-600">{formatPrice(variant.price)}</p>
+          <Badge variant={variant.stock > 0 ? 'default' : 'secondary'}>
+            {variant.stock > 0 ? `${variant.stock} in stock` : 'Out of stock'}
+          </Badge>
+        </div>
+        
+        <button
+          disabled={variant.stock === 0}
+          className="mt-4 w-full bg-gray-900 hover:bg-black disabled:bg-gray-400 text-white px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 font-semibold transition-colors"
+          onClick={() => toast.success(`Added ${variant.name} to cart! (Demo)`)}
+        >
+          <ShoppingCart className="h-5 w-5" />
+          Add to Cart
+        </button>
       </div>
-    </div>
-  </motion.div>
+    </motion.div>
+    
 );

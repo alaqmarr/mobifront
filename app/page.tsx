@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link"; // --- NEW: Import Link for navigation
 import { motion } from "framer-motion";
 import {
   fetchBrands,
@@ -9,35 +10,10 @@ import {
   fetchModels,
   fetchProducts,
   fetchProductVariants,
-  searchProducts,
 } from "@/lib/api";
 import type { Brand, Series, Model, Product, ProductVariant } from "@/types";
 import { ChevronLeft, ChevronRight, Sparkles, Search, ArrowRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-
-/**
- * Modern, sleek landing page
- * - Hero with search
- * - Series carousel at top
- * - Brand shelves: a few products (variants) per brand in horizontal carousels
- *
- * NOTE: This page purposely does NOT use your existing components.
- */
-
-// --- NEW: Debounce Hook ---
-// You can place this here or in a separate hooks file
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-  return debouncedValue;
-}
 
 
 export default function LandingPage() {
@@ -50,7 +26,6 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // lightweight local search (re-using your API util)
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -61,9 +36,6 @@ export default function LandingPage() {
     products: Product[];
     variants: ProductVariant[];
   } | null>(null);
-
-  // --- NEW: Debounce the search query ---
-  const debouncedQuery = useDebounce(query, 1); // 10ms delay
 
   useEffect(() => {
     const load = async () => {
@@ -90,30 +62,41 @@ export default function LandingPage() {
     load();
   }, []);
 
-  // --- NEW: useEffect to trigger search on debounced query change ---
   useEffect(() => {
-    const performSearch = async () => {
-      if (!debouncedQuery.trim()) {
+    const performLocalSearch = () => {
+      if (!query.trim()) {
         setSearchOpen(false);
         setSearchResults(null);
         return;
       }
 
-      try {
-        setSearching(true);
-        const res = await searchProducts(debouncedQuery.trim());
-        setSearchResults(res);
-        setSearchOpen(true);
-      } catch (e) {
-        console.error(e);
-        setSearchResults(null); // Clear results on error
-      } finally {
-        setSearching(false);
-      }
+      setSearching(true);
+
+      const lowerCaseQuery = query.trim().toLowerCase();
+
+      const filteredBrands = brands.filter(b => b.name.toLowerCase().includes(lowerCaseQuery));
+      const filteredSeries = series.filter(s => s.name.toLowerCase().includes(lowerCaseQuery));
+      const filteredModels = models.filter(m => m.name.toLowerCase().includes(lowerCaseQuery));
+      const filteredProducts = products.filter(p => p.name.toLowerCase().includes(lowerCaseQuery));
+      const filteredVariants = variants.filter(v =>
+        v.name.toLowerCase().includes(lowerCaseQuery) ||
+        v.id.toLowerCase().includes(lowerCaseQuery)
+      );
+
+      setSearchResults({
+        brands: filteredBrands,
+        series: filteredSeries,
+        models: filteredModels,
+        products: filteredProducts,
+        variants: filteredVariants,
+      });
+
+      setSearchOpen(true);
+      setSearching(false);
     };
 
-    performSearch();
-  }, [debouncedQuery]);
+    performLocalSearch();
+  }, [query, brands, series, models, products, variants]);
 
 
   // Build quick lookup maps for joins
@@ -153,7 +136,6 @@ export default function LandingPage() {
 
     const grouped = new Map<string, ProductVariant[]>();
     for (const v of variants) {
-      // keep only variants whose modelId belongs to a brand
       for (const [brandId, modelIds] of modelIdsByBrand.entries()) {
         if (modelIds.has(v.modelId)) {
           const arr = grouped.get(brandId) || [];
@@ -164,9 +146,6 @@ export default function LandingPage() {
     }
     return grouped;
   }, [brands, variants, seriesByBrandId, modelsBySeriesId]);
-
-  // --- REMOVED: The onSearch function is no longer needed ---
-  // async function onSearch(e: React.FormEvent) { ... }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_20%_10%,rgba(99,102,241,0.15),transparent_35%),radial-gradient(circle_at_80%_0,rgba(236,72,153,0.12),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(56,189,248,0.12),transparent_30%)]">
@@ -190,7 +169,6 @@ export default function LandingPage() {
               Browse by series and explore popular variants from each brand.
             </p>
 
-            {/* --- MODIFIED: Search input without form/button --- */}
             <div className="mt-8 max-w-xl mx-auto">
               <div className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white/70 backdrop-blur p-2 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 transition-shadow">
                 <Search className="w-5 h-5 text-gray-500 ml-2" />
@@ -217,10 +195,11 @@ export default function LandingPage() {
               </div>
               {searchResults && (
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <ResultPill label="Brands" items={searchResults.brands} />
-                  <ResultPill label="Series" items={searchResults.series} />
-                  <ResultPill label="Models" items={searchResults.models} />
-                  <ResultPill label="Products" items={searchResults.products} nameKey="name" />
+                  {/* --- MODIFIED: Added basePath prop to make items clickable --- */}
+                  <ResultPill label="Brands" items={searchResults.brands} basePath="/brands" />
+                  <ResultPill label="Series" items={searchResults.series} basePath="/series" />
+                  <ResultPill label="Models" items={searchResults.models} basePath="/models" />
+                  <ResultPill label="Products" items={searchResults.products} nameKey="name" basePath="/products" />
                 </div>
               )}
             </motion.div>
@@ -279,21 +258,24 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
         <h2 className="text-2xl md:text-3xl font-bold text-gray-900">{title}</h2>
         {subtitle && <p className="text-gray-600 mt-1">{subtitle}</p>}
       </div>
-      <a href="#" className="hidden md:inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900">
+      <Link href="#" className="hidden md:inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900">
         View all
         <ArrowRight className="w-4 h-4" />
-      </a>
+      </Link>
     </div>
   );
 }
 
+// --- MODIFIED: This component now renders clickable links ---
 function ResultPill<T extends { id: string; name?: string }>({
   label,
   items,
+  basePath, // New prop for the link URL
   nameKey = "name",
 }: {
   label: string;
   items: T[];
+  basePath: string; // New prop type
   nameKey?: keyof T | "name";
 }) {
   if (!items?.length) return (
@@ -307,23 +289,46 @@ function ResultPill<T extends { id: string; name?: string }>({
       <div className="text-xs text-gray-500 mb-1">{label}</div>
       <div className="flex flex-wrap gap-2">
         {items.slice(0, 6).map((it) => (
-          <span key={it.id} className="px-2.5 py-1 rounded-lg bg-gray-900/5 text-gray-800 border border-gray-200">
+          // Replaced <span> with <Link>
+          <Link
+            key={it.id}
+            href={`${basePath}/${it.id}`}
+            className="px-2.5 py-1 rounded-lg bg-gray-900/5 text-gray-800 border border-gray-200 hover:bg-gray-900/10 transition-colors"
+          >
             {(it as any)[nameKey] || (it as any).title || "Item"}
-          </span>
+          </Link>
         ))}
       </div>
     </div>
   );
 }
 
+
 function SeriesCarousel({ items }: { items: Series[] }) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
+
   const scrollBy = (dir: -1 | 1) => {
     const el = scrollerRef.current;
     if (!el) return;
     const amount = Math.min(480, el.clientWidth * 0.8) * dir;
     el.scrollBy({ left: amount, behavior: "smooth" });
   };
+  
+  useEffect(() => {
+    const checkScrollable = () => {
+      const el = scrollerRef.current;
+      if (el) {
+        setIsScrollable(el.scrollWidth > el.clientWidth);
+      }
+    };
+    checkScrollable();
+    window.addEventListener('resize', checkScrollable);
+    
+    return () => {
+      window.removeEventListener('resize', checkScrollable);
+    };
+  }, [items]);
 
   if (!items?.length) {
     return <div className="text-sm text-gray-500">No series to show.</div>;
@@ -331,13 +336,15 @@ function SeriesCarousel({ items }: { items: Series[] }) {
 
   return (
     <div className="relative group">
-      <button
-        onClick={() => scrollBy(-1)}
-        className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 bg-white/80 shadow hover:bg-white hidden md:flex"
-        aria-label="Previous"
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
+      {isScrollable && (
+        <button
+          onClick={() => scrollBy(-1)}
+          className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 bg-white/80 shadow hover:bg-white hidden md:flex"
+          aria-label="Previous"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+      )}
       <div
         ref={scrollerRef}
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent pr-2"
@@ -366,13 +373,15 @@ function SeriesCarousel({ items }: { items: Series[] }) {
           </motion.a>
         ))}
       </div>
-      <button
-        onClick={() => scrollBy(1)}
-        className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 bg-white/80 shadow hover:bg-white hidden md:flex"
-        aria-label="Next"
-      >
-        <ChevronRight className="w-5 h-5" />
-      </button>
+      {isScrollable && (
+        <button
+          onClick={() => scrollBy(1)}
+          className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 bg-white/80 shadow hover:bg-white hidden md:flex"
+          aria-label="Next"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 }
@@ -399,9 +408,9 @@ function BrandShelf({
           </div>
           <h3 className="text-xl font-bold text-gray-900">{brand.name}</h3>
         </div>
-        <a href={`/brands/${brand.id}`} className="text-sm text-gray-700 hover:text-gray-900 inline-flex items-center gap-1">
+        <Link href={`/brands/${brand.id}`} className="text-sm text-gray-700 hover:text-gray-900 inline-flex items-center gap-1">
           View brand <ArrowRight className="w-4 h-4" />
-        </a>
+        </Link>
       </div>
       <RowCarousel>
         {variants.map((v) => (
@@ -414,6 +423,8 @@ function BrandShelf({
 
 function RowCarousel({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
+  
   const scroll = (dir: -1 | 1) => {
     const el = ref.current;
     if (!el) return;
@@ -421,28 +432,47 @@ function RowCarousel({ children }: { children: React.ReactNode }) {
     el.scrollBy({ left: amount, behavior: "smooth" });
   };
 
+  useEffect(() => {
+    const checkScrollable = () => {
+      const el = ref.current;
+      if (el) {
+        setIsScrollable(el.scrollWidth > el.clientWidth);
+      }
+    };
+    checkScrollable();
+    window.addEventListener('resize', checkScrollable);
+    return () => {
+      window.removeEventListener('resize', checkScrollable);
+    };
+  }, [children]);
+
+
   return (
     <div className="relative">
-      <button
-        onClick={() => scroll(-1)}
-        className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 bg-white/90 border border-gray-200 shadow hover:bg-white hidden md:flex"
-        aria-label="Previous"
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
+      {isScrollable && (
+        <button
+          onClick={() => scroll(-1)}
+          className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 bg-white/90 border border-gray-200 shadow hover:bg-white hidden md:flex"
+          aria-label="Previous"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+      )}
       <div
         ref={ref}
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
       >
         {children}
       </div>
-      <button
-        onClick={() => scroll(1)}
-        className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 bg-white/90 border border-gray-200 shadow hover:bg-white hidden md:flex"
-        aria-label="Next"
-      >
-        <ChevronRight className="w-5 h-5" />
-      </button>
+      {isScrollable && (
+        <button
+          onClick={() => scroll(1)}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 rounded-full p-2 bg-white/90 border border-gray-200 shadow hover:bg-white hidden md:flex"
+          aria-label="Next"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 }
