@@ -495,7 +495,7 @@ function VariantCard({ variant, product }: { variant: ProductVariant; product?: 
       </div>
       <div className="p-4">
         <div className="text-xs text-gray-500 line-clamp-1">{product?.name}</div>
-        <div className="font-semibold text-gray-900 line-clamp-1">{variant.name}</div>
+        <div className="font-semibold text-gray-900 line-clamp-1">{variant.model.name}</div>
         <div className="mt-2 font-bold text-indigo-600">{formatPrice(price)}</div>
       </div>
     </motion.a>
